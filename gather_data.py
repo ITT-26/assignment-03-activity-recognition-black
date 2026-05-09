@@ -161,7 +161,7 @@ while activity_idx < len(activities):  # loop for going through all activities
                     if set_counter > 5:
                         # if set is higher the required go to next sampling rate
                         sampling_rate_idx += 1
-                        freq_time_window = 1 / sampling_rates[sampling_rate_idx]
+
                         # calculate immediatly after update of idx
 
                         set_counter = 1
@@ -172,10 +172,10 @@ while activity_idx < len(activities):  # loop for going through all activities
                             activity_idx += 1
 
                             sampling_rate_idx = 0
-                            freq_time_window = 1 / sampling_rates[sampling_rate_idx]
-                            # calculate immediatly after update of idx
-                            # reset sampling rate idx for starting a new activity
 
+                        freq_time_window = 1 / sampling_rates[sampling_rate_idx]
+                        # calculate immediatly after update of idx
+                        # reset sampling rate idx for starting a new activity
                     if activity_idx < len(activities):
                         print(
                             "Ready to start next recording. The next set is:\n"
