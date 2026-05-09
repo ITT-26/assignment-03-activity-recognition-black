@@ -59,7 +59,7 @@ while activity_idx < len(activities):  # loop for going through all activities
         # loop for sampling rates (20 Hz and 100 Hz)
 
         freq_time_window = 1 / sampling_rates[sampling_rate_idx]
-        # time window between samples with current frequencyone sample
+        # time window between samples with current frequency one sample
 
         rows = []
 
@@ -161,6 +161,8 @@ while activity_idx < len(activities):  # loop for going through all activities
                     if set_counter > 5:
                         # if set is higher the required go to next sampling rate
                         sampling_rate_idx += 1
+                        freq_time_window = 1 / sampling_rates[sampling_rate_idx]
+                        # calculate immediatly after update of idx
 
                         set_counter = 1
                         # reset set_counter when starting recording with next sampling rate
@@ -170,6 +172,8 @@ while activity_idx < len(activities):  # loop for going through all activities
                             activity_idx += 1
 
                             sampling_rate_idx = 0
+                            freq_time_window = 1 / sampling_rates[sampling_rate_idx]
+                            # calculate immediatly after update of idx
                             # reset sampling rate idx for starting a new activity
 
                     if activity_idx < len(activities):
