@@ -31,7 +31,7 @@ while placement_id is None or placement is None:
 
 
 activities = ["running", "rowing", "lifting", "jumpingjacks"]
-sampling_rates = [100]
+sampling_rates = [20, 100]
 sets_per_activity = 5
 
 activity_idx = 0
