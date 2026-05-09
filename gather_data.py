@@ -31,7 +31,7 @@ while placement_id is None or placement is None:
 
 
 activities = ["running", "rowing", "lifting", "jumpingjacks"]
-sampling_rates = [20, 100]
+sampling_rates = [100]
 sets_per_activity = 5
 
 activity_idx = 0
@@ -61,6 +61,8 @@ while activity_idx < len(activities):  # loop for going through all activities
         freq_time_window = 1 / sampling_rates[sampling_rate_idx]
         # time window between samples with current frequencyone sample
 
+        rows = []
+
         while set_counter <= sets_per_activity:
             # loop for running 5 sets of each sampling rate and acitivity
 
@@ -69,12 +71,15 @@ while activity_idx < len(activities):  # loop for going through all activities
                 if sensor.has_capability("button_1"):
                     if int(sensor.get_value("button_1")) == 1:
                         is_recording = True
+                        rows = []  # clear rows
                         print(
                             "\nButton 1 Pressed\nRecording will start in 3 seconds.\n"
                             "Position the sensor and start the activity now.\n"
                             "Recording will stop after 10 seconds!"
                         )
-                        time.sleep(3) # 3 sec grace for getting ready e.g. putting phone in pocket
+                        time.sleep(
+                            3
+                        )  # 3 sec grace for getting ready e.g. putting phone in pocket
                         print("\nStart!")
                         row_id = 1  # reset row_id when starting a new set
                         recording_start_time = time.time()
@@ -85,10 +90,10 @@ while activity_idx < len(activities):  # loop for going through all activities
             if is_recording:  # when recording was started do the recording
                 recording_runtime = time.time() - recording_start_time
                 # calculate current runtime
-                
+
                 if not recording_runtime >= recording_duration:
                     if time.time() < next_sample_time:
-                        time.sleep(0.0025)  # sleep time time until next iteration
+                        time.sleep(0.0001)  # sleep time time until next iteration
                         continue  # if not enough time has passend simply continue and check again in next iteration
 
                     next_sample_time += freq_time_window
@@ -112,7 +117,10 @@ while activity_idx < len(activities):  # loop for going through all activities
                         row_data["gyro_z"] = gyro_data["z"]
                         # append gyroscope data to row_data
 
-                    df.loc[len(df)] = row_data
+                    rows.append(
+                        row_data
+                    )  # append to list instead of df directly for better performance
+                    # df.loc[len(df)] = row_data
                     # transform the row_data dict to real df row (and append)
 
                     row_id += 1  # update row id for next iteration
@@ -128,11 +136,16 @@ while activity_idx < len(activities):  # loop for going through all activities
                         f"{placement}-"
                         f"{set_counter}.csv"
                     )
-                    path = f".{os.sep}data{os.sep}{name}{os.sep}"  # set the directory path
+                    path = (
+                        f".{os.sep}data{os.sep}{name}{os.sep}"  # set the directory path
+                    )
                     Path(path).mkdir(exist_ok=True, parents=True)
                     # create the path if it doesnt exist already
                     # parents True for nested path
+
                     full_path = path + file_name  # combine for full_path
+
+                    df = pd.DataFrame(rows)
                     df = df.dropna()  # just in case of NaN values
                     df.to_csv(full_path, index=False)  # save the df to file
                     # no pandas index (like in example file)
@@ -171,5 +184,3 @@ while activity_idx < len(activities):  # loop for going through all activities
                         )
                         sensor.disconnect()
                         exit()
-
-
