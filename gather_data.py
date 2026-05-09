@@ -128,7 +128,7 @@ while activity_idx < len(activities):  # loop for going through all activities
                         f"{placement}-"
                         f"{set_counter}.csv"
                     )
-                    path = f".{os.sep}gathered_data{os.sep}{name}{os.sep}"  # set the directory path
+                    path = f".{os.sep}data{os.sep}{name}{os.sep}"  # set the directory path
                     Path(path).mkdir(exist_ok=True, parents=True)
                     # create the path if it doesnt exist already
                     # parents True for nested path

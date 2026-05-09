@@ -10,6 +10,6 @@
     - when you want to start an activity you need to press button 1 on the DIPPID device
     - after pressing the button you have 3 seconds to set up and start the acitivity before the recording starts
     - after 10 seconds of recording the recording is stopped and it will automatically continue with either the next set, the next sampling rate or the next acitivity
- - files will be generated in the directory `.\gathered_data\your_name\` 
+ - files will be generated in the directory `.\data\your_name\` 
  - you need to run the programm twice (1x sensor placement = hand and 1x sensor placement = pocket) to capture all data for the assignment
  - after that the folder with your name should include everything you need and you can upload it to the data collection 
