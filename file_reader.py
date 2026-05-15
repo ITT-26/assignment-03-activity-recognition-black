@@ -2,35 +2,59 @@ import pandas as pd
 from pathlib import Path
 import re
 
-class CSVReader: 
-    
+
+class CSVReader:
+
     def __init__(self):
         self.data_directory = Path("data")
-        self.valid_data_names = ["Daniel", "felix", "ferdi", "georg", "lennart", "marcel", "maximilian", "patrick", "thu", "vanessa"]
-        self.needs_gyro_conversion = ["lennart", "maximilian"]
-        
-        self.recordings = []
-    
+        self.valid_data_names = [
+            "Daniel",
+            "felix",
+            "ferdi",
+            "georg",
+            "lennart",
+            "marcel",
+            "maximilian",
+            "patrick",
+            "thu",
+            "vanessa",
+        ]
+
     def get_recording_as_df(self, path):
         df = pd.read_csv(path)
         return df
-    
-    def read_all_data_files(self):
+
+    def get_data_files_as_df(self):
+
+        recordings = []
+
+        NEEDED_TAGS = 5
+
         for name in self.valid_data_names:
             directory = self.data_directory / name
             for file in directory.glob("*.csv"):
                 tags = re.split(r"-", file.stem)
+                
+                for i, tag in enumerate(tags):
+                    if tag == 'jumping_jacks':
+                        tags[i] = 'jumpingjacks'
+                        
+                tag_index = (
+                    len(tags) - NEEDED_TAGS
+                )  # for more than one name in file name
                 recording = {
-                    "name" : tags[0].lower(),
-                    "activity" : tags[1].lower(),
-                    "frequency": tags[2].lower(),
-                    "sensor_placement": tags[3].lower(),
-                    "set" : tags[4],
-                    "data": self.get_recording_as_df(file)
+                    "name": tags[tag_index].lower(),
+                    "activity": tags[tag_index + 1].lower(),
+                    "sample_rate": tags[tag_index + 2].lower(),
+                    "sensor_placement": tags[tag_index + 3].lower(),
+                    "set": tags[tag_index + 4],
+                    "data": self.get_recording_as_df(file),
                 }
-                self.recordings.append(recording)
+                recordings.append(recording)
+
+        return recordings
 
 
-#reader = CSVReader()
-#reader.read_all_data_files()
-#print(reader.recordings)
+# reader = CSVReader()
+# reader.read_all_data_files()
+# print(reader.recordings)
