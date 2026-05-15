@@ -74,8 +74,8 @@ def transform_windows_to_features(windows):
             feature_row[f"{gyro_col}_min"] = window[gyro_col].min()
             feature_row[f"{gyro_col}_max"] = window[gyro_col].max()
 
-        acc_strengths = np.sqrt(window["acc_x"]**2,+ window["acc_y"]**2, window["acc_z"]**2)
-        gyro_strengths = np.sqrt(window["gyro_x"]**2,+ window["gyro_y"]**2, window["gyro_z"]**2)
+        acc_strengths = np.sqrt(window["acc_x"]**2 + window["acc_y"]**2 + window["acc_z"]**2)
+        gyro_strengths = np.sqrt(window["gyro_x"]**2 + window["gyro_y"]**2 + window["gyro_z"]**2)
         
         feature_row["acc_strenght_mean"] = acc_strengths.mean()
         feature_row["acc_strenght_std"] = acc_strengths.std()
@@ -100,17 +100,21 @@ def transform_windows_to_features(windows):
     return classifier_data
 
 
-def perform_standard_scaling(train_dataset, dataset_to_scale):
+def perform_standard_scaling(train_df, df_to_scale):
     scaler = StandardScaler()
-    scaler.fit(train_dataset[[col for col in train_dataset.columns if col != "activity"]])
-    scaled_samples =  scaler.transform(dataset_to_scale[[col for col in dataset_to_scale.columns if col != "activity"]])
-    return scaled_samples
+    scaler.fit(train_df[[col for col in train_df.columns if col != "activity"]])
+    scaled_samples =  scaler.transform(df_to_scale[[col for col in df_to_scale.columns if col != "activity"]])
+    df_scaled = df_to_scale.copy()
+    df_scaled[[col for col in df_scaled.columns if col != "activity"]] = scaled_samples
+    return df_scaled
 
-def perform_normalization(train_dataset, dataset_to_normalize):
+def perform_normalization(train_df, df_to_normalize):
     scaler = MinMaxScaler()
-    scaler.fit(train_dataset[[col for col in train_dataset.columns if col != "activity"]])
-    scaled_samples = scaler.transform(dataset_to_normalize[[col for col in dataset_to_normalize.columns if col != "activity"]])
-    return scaled_samples
+    scaler.fit(train_df[[col for col in train_df.columns if col != "activity"]])
+    scaled_samples = scaler.transform(df_to_normalize[[col for col in df_to_normalize.columns if col != "activity"]])
+    df_normalized = df_to_normalize.copy()
+    df_normalized[[col for col in df_normalized.columns if col != "activity"]] = scaled_samples
+    return df_normalized
 
 convert_gyro_data()
 
