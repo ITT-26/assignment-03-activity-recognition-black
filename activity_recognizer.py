@@ -38,7 +38,7 @@ def data_setup(time_window):
     normalized_train = preprocessor.perform_normalization(standard_scaled_train, standard_scaled_train )
     normalized_test = preprocessor.perform_normalization(standard_scaled_train, standard_scaled_test)
 
-def model_train()
+def model_train():
     pass
 def capure_data_continuosly():
     pass
