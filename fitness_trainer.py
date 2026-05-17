@@ -1,4 +1,4 @@
-import pyglet, time
+import pyglet, time, sys
 import pyglet.gl as gl
 from pyglet import window
 from activity_recognizer import ActivityRecognizer
@@ -102,7 +102,7 @@ class ActivityDisplay:
 
     def update_display(self, activity, confidence):
         self.activity_label.text = activity
-        self.confidence_score_label.text = f"{confidence * 100:.1f}%"
+        self.confidence_score_label.text = f"{confidence*100:.1f}%"
         self.get_activity_images(activity)
 
     def get_activity_images(self, activity):
@@ -195,7 +195,11 @@ def main():
 
     trainer = Trainer(window)
 
-    recognizer = ActivityRecognizer()
+    player_name = "player"
+    if len(sys.argv) >= 2:
+        player_name = sys.argv[1]
+        
+    recognizer = ActivityRecognizer(player_name)
 
     def startup(dt):
         recognizer.prepare_recognizer()

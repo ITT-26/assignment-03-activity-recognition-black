@@ -62,43 +62,50 @@ def transform_windows_to_features(windows, time_window):
             feature_row[f"{acc_col}_std"] = window[acc_col].std()
             feature_row[f"{acc_col}_min"] = window[acc_col].min()
             feature_row[f"{acc_col}_max"] = window[acc_col].max()
-
-        for gyro_col in ["gyro_x", "gyro_y", "gyro_z"]:
+        # dont use gyro data because of testing    
+        """ 
+        for gyro_col in ["gyro_x", "gyro_y", "gyro_z"]: 
             feature_row[f"{gyro_col}_mean"] = window[gyro_col].mean()
             feature_row[f"{gyro_col}_std"] = window[gyro_col].std()
             feature_row[f"{gyro_col}_min"] = window[gyro_col].min()
             feature_row[f"{gyro_col}_max"] = window[gyro_col].max()
-
+        """
         acc_strengths = np.sqrt(
             window["acc_x"] ** 2 + window["acc_y"] ** 2 + window["acc_z"] ** 2
         )
+        
         gyro_strengths = np.sqrt(
             window["gyro_x"] ** 2 + window["gyro_y"] ** 2 + window["gyro_z"] ** 2
         )
-
+        
         feature_row["acc_strenght_mean"] = acc_strengths.mean()
         feature_row["acc_strenght_std"] = acc_strengths.std()
 
+        
         feature_row["gyro_strenght_mean"] = gyro_strengths.mean()
         feature_row["gyro_strenght_std"] = gyro_strengths.std()
-
-        acc_signal = acc_strengths - acc_strengths.mean() 
+        
+        acc_signal = acc_strengths - acc_strengths.mean()
         # durchschnitt/grundwert des signals entfernen um nur echte veränderungen zu erhalten
         # (mit Hilfe von ChatGPT auf diesen fix gekommen)
-        
+
         acc_signal_hamming = acc_signal * np.hamming(len(acc_signal))
         acc_fft = np.fft.rfft(acc_signal_hamming)
         acc_freqs = np.fft.rfftfreq(len(acc_signal_hamming), time_window / len(window))
         feature_row["acc_dom_freq"] = acc_freqs[np.argmax(np.abs(acc_fft))]
 
-        gyro_signal = gyro_strengths - gyro_strengths.mean() 
+        
+        gyro_signal = gyro_strengths - gyro_strengths.mean()
         # durchschnitt/grundwert des signals entfernen um nur echte veränderungen zu erhalten
         # (mit Hilfe von ChatGPT auf diesen fix gekommen)
 
         gyro_signal_hamming = gyro_signal * np.hamming(len(gyro_signal))
         gyro_fft = np.fft.rfft(gyro_signal_hamming)
-        gyro_freqs = np.fft.rfftfreq(len(gyro_signal_hamming), time_window  / len(window) )
+        gyro_freqs = np.fft.rfftfreq(
+            len(gyro_signal_hamming), time_window / len(window)
+        )
         feature_row["dom_gyro_freq"] = gyro_freqs[np.argmax(np.abs(gyro_fft))]
+        
 
         feature_rows.append(feature_row)
 

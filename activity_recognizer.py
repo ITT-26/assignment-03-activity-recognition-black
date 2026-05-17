@@ -1,10 +1,10 @@
 # this program recognizes activities
 from file_reader import CSVReader
 import data_processing
-from sklearn.multiclass import OneVsRestClassifier
+from sklearn.multiclass import OneVsOneClassifier
 from sklearn import svm
-from sklearn.metrics import accuracy_score, classification_report
 import pandas as pd
+import numpy as np
 import threading
 import time
 from DIPPID import SensorUDP
@@ -12,7 +12,7 @@ from collections import deque
 
 
 class ActivityRecognizer:
-    def __init__(self):
+    def __init__(self, player_name):
         self.TIME_WINDOW = 2
         self.SAMPLE_RATE = 20  # in Hz
         self.classifier = None
@@ -32,6 +32,8 @@ class ActivityRecognizer:
         
         self.prediction = None
         self.confidence = None
+        
+        self.player = player_name
 
     def data_setup(self):
         reader = CSVReader()
@@ -56,16 +58,16 @@ class ActivityRecognizer:
         self.classifier.fit(features, activities)
 
     def classifier_setup(self, features, activities):
-        self.classifier = OneVsRestClassifier(svm.SVC(kernel="rbf", probability=True))
+        self.classifier = OneVsOneClassifier(svm.SVC(kernel="rbf"))
         self.train_classifier(features, activities)
 
     def predict_classes(self, feature_data):
         classes_predicted = self.classifier.predict(feature_data)
         return classes_predicted
     
-    def predict_probabilites(self, feautre_data):
-        probabilities = self.classifier.predict_proba(feautre_data)
-        return probabilities
+    def get_decision_data(self, feature_data):
+        decision_data = self.classifier.decision_function(feature_data)
+        return decision_data
 
     def collect_sensor_data(self, data_deque, sample_rate, interruption_event):
         PORT = 5700
@@ -111,10 +113,11 @@ class ActivityRecognizer:
     def run_recognizer(self, interruption_event):
         while not interruption_event.is_set():
             if len(self.sample_data) >= self.amount_of_samples_for_prediction:
+                
                 start_time = time.time()
                 live_recording = [
                     {
-                        "name": "player",
+                        "name": self.player,
                         "activity": None,
                         "sample_rate": f"{self.SAMPLE_RATE}hz",
                         "data": pd.DataFrame(self.sample_data),
@@ -129,7 +132,11 @@ class ActivityRecognizer:
                 self.sample_features = normalized_data.copy().drop(columns="activity")
                 
                 self.prediction = self.predict_classes(self.sample_features)[0]
-                self.confidence = self.predict_probabilites(self.sample_features)[0].max()
+                
+                decision_data = self.get_decision_data(self.sample_features)[0]
+                print(decision_data)
+            
+                self.confidence = decision_data.max()  / decision_data.sum()
               
                 #print(f"Prediction: {self.prediction} in time: {time.time()- start_time}")
             time.sleep(0.05)
