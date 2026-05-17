@@ -14,7 +14,7 @@ from collections import deque
 class ActivityRecognizer:
     def __init__(self, player_name):
         self.TIME_WINDOW = 2
-        self.SAMPLE_RATE = 20  # in Hz
+        self.SAMPLE_RATE = 100  # in Hz
         self.classifier = None
         self.amount_of_samples_for_prediction = self.TIME_WINDOW * self.SAMPLE_RATE
 
