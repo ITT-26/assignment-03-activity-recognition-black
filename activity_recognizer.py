@@ -5,91 +5,140 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn import svm
 from sklearn.metrics import accuracy_score, classification_report
 import pandas as pd
+import threading
+import time
+from DIPPID import SensorUDP
+from collections import deque
 
 
-def data_setup(time_window):
-    reader = CSVReader()
-    recordings = reader.get_data_files_as_df()
-    data_processing.convert_gyro_data(recordings)
+class ActivityRecognizer:
+    def __init__(self):
+        self.TIME_WINDOW = 2
+        self.SAMPLE_RATE = 20  # in Hz
+        self.classifier = None
+        self.amount_of_samples_for_prediction = self.TIME_WINDOW * self.SAMPLE_RATE
 
-    train_recordings, test_recordings = data_processing.split_recordings_to_train_test(
-        recordings
-    )
-    # suggestion from ChatGPT to already split here since train and test data should be normalized
-    # only with the scaler fit to the test data
+        self.standard_scaler = None
+        self.min_max_scaler = None
 
-    train_windows = data_processing.create_time_windows(train_recordings, time_window)
-    test_windows = data_processing.create_time_windows(test_recordings, time_window)
+        self.sample_data = deque(maxlen=self.amount_of_samples_for_prediction)
+        self.sample_features = []
 
-    classifier_train_data = data_processing.transform_windows_to_features(train_windows)
-    classifier_test_data = data_processing.transform_windows_to_features(test_windows)
+        self.sensor_thread = None
+        self.interrupt_event_collecting = threading.Event()
 
-    standard_scaled_train = data_processing.perform_standard_scaling(
-        classifier_train_data, classifier_train_data
-    )
-    standard_scaled_test = data_processing.perform_standard_scaling(
-        classifier_train_data, classifier_test_data
-    )
+        self.recognizer_thread = None
+        self.interrupt_event_recognizer = threading.Event()
+        
+        self.prediction = "jumpingjack"
 
-    normalized_train = data_processing.perform_normalization(
-        standard_scaled_train, standard_scaled_train
-    )
-    normalized_test = data_processing.perform_normalization(
-        standard_scaled_train, standard_scaled_test
-    )
+    def data_setup(self):
+        reader = CSVReader()
+        recordings = reader.get_data_files_as_df()
+        data_processing.convert_gyro_data(recordings)
 
-    train_activities = normalized_train["activity"]
-    train_features = normalized_train.copy().drop(columns="activity")
+        data_windows = data_processing.create_time_windows(recordings, self.TIME_WINDOW)
+        # all data for  training in live system
+        classifier_data = data_processing.transform_windows_to_features(data_windows)
 
-    test_activities = normalized_test["activity"]
-    test_features = normalized_test.copy().drop(columns="activity")
+        self.standard_scaler = data_processing.fit_and_get_standard_scaler(classifier_data)
+        self.min_max_scaler = data_processing.fit_and_get_min_max_scaler(classifier_data)
+        standard_scaled_data = data_processing.perform_scaling(self.standard_scaler, classifier_data)
+        normalized_data = data_processing.perform_scaling(self.min_max_scaler, standard_scaled_data)
 
-    return train_activities, train_features, test_activities, test_features
+        activities = normalized_data["activity"]
+        features = normalized_data.copy().drop(columns="activity")
 
+        return activities, features
 
-def train_and_evaluate(
-    classifier, features_train, classes_train, features_test, classes_test
-):
-    # function code from notebook by max
-    classifier.fit(features_train, classes_train)
+    def train_classifier(self, features, activities):
+        self.classifier.fit(features, activities)
 
-    classes_predicted = classifier.predict(features_test)
-    # hier eigentlich doch predict auf aufgezeichnete daten
+    def classifier_setup(self, features, activities):
+        self.classifier = OneVsRestClassifier(svm.SVC(kernel="rbf"))
+        self.train_classifier(features, activities)
 
-    accuracy = accuracy_score(classes_test, classes_predicted)
-    # für was braucht man dann test hier? braucht man das im laufenden recogniizer?
-    return classes_predicted, accuracy
+    def predict_classes(self, feature_data):
+        classes_predicted = self.classifier.predict(feature_data)
+        return classes_predicted
 
+    def collect_sensor_data(self, data_deque, sample_rate, interruption_event):
+        PORT = 5700
+        sensor = SensorUDP(PORT)
+        time_between_samples = 1 / sample_rate
+        next_sample = time.time()
+        while not interruption_event.is_set():
+            if time.time() >= next_sample:
+                sample = {}
+                sample["timestamp"] = time.time()
+                if sensor.has_capability("accelerometer"):
+                    acc_data = sensor.get_value("accelerometer")
+                    sample["acc_x"] = acc_data["x"]
+                    sample["acc_y"] = acc_data["y"]
+                    sample["acc_z"] = acc_data["z"]
+                else: 
+                    print("Getting no data! Check Sensor connection!")
+                if sensor.has_capability("gyroscope"):
+                    gyro_data = sensor.get_value("gyroscope")
+                    sample["gyro_x"] = gyro_data["x"]
+                    sample["gyro_y"] = gyro_data["y"]
+                    sample["gyro_z"] = gyro_data["z"]
+                data_deque.append(sample)
+            time.sleep(time_between_samples / 2)
 
-def train_classifier(classifier, features_train, train_classes):
-    classifier.fit(features_train, train_classes)
+    def start_data_collection(self):
+        self.sensor_thread = threading.Thread(
+            target=self.collect_sensor_data,
+            args=(self.sample_data, self.SAMPLE_RATE, self.interrupt_event_collecting),
+        )
+        self.sensor_thread.start()
 
+    def prepare_recognizer(self):
+        # das als erstes aus fitness_trainer.py
+        acitvities, features = self.data_setup()
 
-def predict_classes(classifier, feature_data):
-    classes_predicted = classifier.predict(feature_data)
-    return classes_predicted
+        self.classifier_setup(features, acitvities)
+        print("Ready to start! Classifier is ready!")
 
+    def run_recognizer(self, interruption_event):
+        while not interruption_event.is_set():
+            if len(self.sample_data) >= self.amount_of_samples_for_prediction:
+                start_time = time.time()
+                live_recording = [
+                    {
+                        "name": "player",
+                        "activity": None,
+                        "sample_rate": f"{self.SAMPLE_RATE}hz",
+                        "data": pd.DataFrame(self.sample_data),
+                    }
+                ]
+                data_processing.convert_gyro_data(live_recording)
+                data_window = data_processing.create_time_windows(live_recording, self.TIME_WINDOW)
+                classifier_data = data_processing.transform_windows_to_features(data_window)
+                standard_scaled_data = data_processing.perform_scaling(self.standard_scaler, classifier_data)
+                normalized_data = data_processing.perform_scaling(self.min_max_scaler, standard_scaled_data)
 
-def plot_classification_report(
-    classes_test, classes_predicted
-):  # fucntion code from notebook by max
-    report = classification_report(classes_test, classes_predicted, output_dict=True)
-    df = pd.DataFrame(report)
-    return df
+                self.sample_features = normalized_data.copy().drop(columns="activity")
+                
+                self.prediction = self.predict_classes(self.sample_features)[0]
+                print(f"Prediction: {self.prediction} in time: {time.time()- start_time}")
+            time.sleep(0.05)
 
+    def start_recognizer(self):
+        # das in fitness trainer wenn start des trainings sozusagen
+        self.start_data_collection()
+        self.recognizer_thread = threading.Thread(
+            target=self.run_recognizer, args=(self.interrupt_event_collecting,)
+        )
+        self.recognizer_thread.start()
 
-def classifier_setup(train_classes, train_features):
-    classifier = OneVsRestClassifier(svm.SVC(kernel="rbf"))
-    train_classifier(classifier, train_classes, train_features)
-    return classifier
+    def stop_recognizer(self):
+        # das bei beedingung des trainings
+        self.interrupt_event_collecting.set()
+        self.interrupt_event_recognizer.set()
+        self.sensor_thread.join()
+        self.recognizer_thread.join()
+        print("Recognizer stopped!")
 
-
-TIME_WINDOW = 2
-
-train_classes, train_features, test_classes, test_features = data_setup(TIME_WINDOW)
-classifier = classifier_setup(train_features, train_classes)
-prediction = predict_classes(classifier, test_features.iloc[[0]])
-# hier dann aufgezeichnetes window rein
-
-print(f"Prediction: {prediction}")
-print(f"Real: {test_classes.iloc[0]}")
+    def get_prediction(self):
+        return self.prediction

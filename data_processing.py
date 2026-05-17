@@ -1,10 +1,7 @@
-from file_reader import CSVReader
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
-from collections import Counter
-import re
 
 
 def convert_gyro_data(recordings):
@@ -17,6 +14,7 @@ def convert_gyro_data(recordings):
 
 
 def split_recordings_to_train_test(recordings):
+    # not needed in live system was only needed for model testing
     training, test = train_test_split(
         recordings,
         test_size=0.2,
@@ -100,25 +98,22 @@ def transform_windows_to_features(windows):
     return classifier_data
 
 
-def perform_standard_scaling(train_df, df_to_scale):
+def fit_and_get_standard_scaler(train_df):
     scaler = StandardScaler()
     scaler.fit(train_df[[col for col in train_df.columns if col != "activity"]])
+    return scaler
+
+
+def fit_and_get_min_max_scaler(train_df):
+    scaler = MinMaxScaler()
+    scaler.fit(train_df[[col for col in train_df.columns if col != "activity"]])
+    return scaler
+
+
+def perform_scaling(scaler, df_to_scale):
     scaled_samples = scaler.transform(
         df_to_scale[[col for col in df_to_scale.columns if col != "activity"]]
     )
     df_scaled = df_to_scale.copy()
     df_scaled[[col for col in df_scaled.columns if col != "activity"]] = scaled_samples
     return df_scaled
-
-
-def perform_normalization(train_df, df_to_normalize):
-    scaler = MinMaxScaler()
-    scaler.fit(train_df[[col for col in train_df.columns if col != "activity"]])
-    scaled_samples = scaler.transform(
-        df_to_normalize[[col for col in df_to_normalize.columns if col != "activity"]]
-    )
-    df_normalized = df_to_normalize.copy()
-    df_normalized[[col for col in df_normalized.columns if col != "activity"]] = (
-        scaled_samples
-    )
-    return df_normalized
