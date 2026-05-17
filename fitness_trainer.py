@@ -9,7 +9,7 @@ class ActivityDisplay:
         self.box = box
         self.labels = pyglet.graphics.Batch()
         self.activity_images = None
-        self.unknown_activity_text = "Unknown Exercise or Incorrect Form"
+        self.unknown_activity_text = "No Movement"
         self.create_labels()
         self.create_icons()
 
