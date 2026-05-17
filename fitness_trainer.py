@@ -1,9 +1,7 @@
-import pyglet
+import pyglet, time
 import pyglet.gl as gl
 from pyglet import window
-import time
 from activity_recognizer import ActivityRecognizer
-
 
 
 class ActivityDisplay:
@@ -11,6 +9,7 @@ class ActivityDisplay:
         self.box = box
         self.labels = pyglet.graphics.Batch()
         self.activity_images = None
+        self.unknown_activity_text = "Unknown Exercise or Incorrect Form"
         self.create_labels()
         self.create_icons()
 
@@ -25,7 +24,7 @@ class ActivityDisplay:
             batch=self.labels,
         )
         self.activity_label = pyglet.text.Label(
-            "UNKNOWN",
+            "NO SENSOR",
             font_size=int(self.box.height * 0.05),
             x=self.box.width / 2,
             y=self.box.height * 0.89,
@@ -70,6 +69,16 @@ class ActivityDisplay:
             batch=self.labels,
         )
 
+        self.loading_label = pyglet.text.Label(
+            "Loading the Fitness Trainer...",
+            font_size=int(self.box.height * 0.07),
+            x=self.box.width / 2,
+            y=self.box.height * 0.6,
+            anchor_x="center",
+            color=(0, 10, 10, 255),
+            batch=self.labels,
+        )
+
     def create_icons(self):
         self.icons = pyglet.graphics.Batch()
         self.confidence_icon = pyglet.sprite.Sprite(
@@ -97,6 +106,9 @@ class ActivityDisplay:
         self.get_activity_images(activity)
 
     def get_activity_images(self, activity):
+        if activity == self.unknown_activity_text:
+            self.activity_images = None
+            return
         name = activity.lower().replace(" ", "")
         f1 = f"img/{name}_1.png"
         f2 = f"img/{name}_2.png"
@@ -138,6 +150,8 @@ class ActivityDisplay:
 
             img1.blit(start_x, y, width=w1, height=h1)
             img2.blit(start_x + w1 + spacing, y, width=w2, height=h2)
+            
+       
 
 
 class Trainer:
@@ -147,40 +161,73 @@ class Trainer:
         self.current_activity = None
         self.confidence = None
         self.activity_display = ActivityDisplay(self.window)
+        self.timer = 0
+        self.timer_start = time.time()
 
     def set_activity(self, activity, confidence):
+        if self.current_activity != activity:
+            self.restart_timer()
         self.current_activity = activity
         self.confidence = confidence
         self.update_display()
+
+    def restart_timer(self):
+        self.timer = 0
+        self.timer_start = time.time()
+
+    def update_timer(self):
+        if self.current_activity is not None:
+            self.timer = round((time.time() - self.timer_start),1)
+            self.activity_display.time_in_activity_value_label.text = f"{self.timer}s"
+        
 
     def update_display(self):
         self.activity_display.update_display(self.current_activity, self.confidence)
 
     def draw(self):
         self.background.blit(0, 0, width=self.window.width, height=self.window.height)
+        self.update_timer()
         self.activity_display.on_draw()
 
 
 def main():
-    window = pyglet.window.Window(1200, 800, "Activity Trainer")
+    window = pyglet.window.Window(2000, 1400, "Activity Trainer")
 
     trainer = Trainer(window)
 
     recognizer = ActivityRecognizer()
-    recognizer.prepare_recognizer()
-    recognizer.start_recognizer()
+
+    def startup(dt):
+        recognizer.prepare_recognizer()
+        recognizer.start_recognizer()
+        trainer.activity_display.loading_label.color = (0, 0, 0, 0)
+
+    pyglet.clock.schedule_once(startup, 0.1)
 
     @window.event
     def on_draw():
         window.clear()
         trainer.draw()
 
-    pyglet.clock.schedule_interval(lambda dt: query_activity_prediction(dt, trainer, recognizer), 0.1)
+    @window.event
+    def on_close():
+        recognizer.stop_recognizer()
+        pyglet.app.exit()
+
+    pyglet.clock.schedule_interval(
+        lambda dt: query_activity_prediction(dt, trainer, recognizer), 0.5
+    )
 
 
 def query_activity_prediction(dt, trainer, recognizer):
     activity = recognizer.get_prediction()
-    confidence = 0.8
+    if activity is None:
+        return
+    confidence = recognizer.get_confidence()
+    if confidence is None:
+        return
+    # if confidence < 0.72:
+    #   activity = trainer.activity_display.unknown_activity_text
     trainer.set_activity(activity, confidence)
 
 

@@ -49,7 +49,7 @@ def create_time_windows(recordings, window_length):
     return windows
 
 
-def transform_windows_to_features(windows):
+def transform_windows_to_features(windows, time_window):
     feature_rows = []
 
     for window in windows:
@@ -82,14 +82,22 @@ def transform_windows_to_features(windows):
         feature_row["gyro_strenght_mean"] = gyro_strengths.mean()
         feature_row["gyro_strenght_std"] = gyro_strengths.std()
 
-        acc_strengths_hamming = acc_strengths * np.hamming(len(acc_strengths))
-        acc_fft = np.fft.rfft(acc_strengths_hamming)
-        acc_freqs = np.fft.rfftfreq(len(acc_strengths_hamming), 1 / len(window))
+        acc_signal = acc_strengths - acc_strengths.mean() 
+        # durchschnitt/grundwert des signals entfernen um nur echte veränderungen zu erhalten
+        # (mit Hilfe von ChatGPT auf diesen fix gekommen)
+        
+        acc_signal_hamming = acc_signal * np.hamming(len(acc_signal))
+        acc_fft = np.fft.rfft(acc_signal_hamming)
+        acc_freqs = np.fft.rfftfreq(len(acc_signal_hamming), time_window / len(window))
         feature_row["acc_dom_freq"] = acc_freqs[np.argmax(np.abs(acc_fft))]
 
-        gyro_strengths_hamming = gyro_strengths * np.hamming(len(gyro_strengths))
-        gyro_fft = np.fft.rfft(gyro_strengths_hamming)
-        gyro_freqs = np.fft.rfftfreq(len(gyro_strengths_hamming), 1 / len(window))
+        gyro_signal = gyro_strengths - gyro_strengths.mean() 
+        # durchschnitt/grundwert des signals entfernen um nur echte veränderungen zu erhalten
+        # (mit Hilfe von ChatGPT auf diesen fix gekommen)
+
+        gyro_signal_hamming = gyro_signal * np.hamming(len(gyro_signal))
+        gyro_fft = np.fft.rfft(gyro_signal_hamming)
+        gyro_freqs = np.fft.rfftfreq(len(gyro_signal_hamming), time_window  / len(window) )
         feature_row["dom_gyro_freq"] = gyro_freqs[np.argmax(np.abs(gyro_fft))]
 
         feature_rows.append(feature_row)

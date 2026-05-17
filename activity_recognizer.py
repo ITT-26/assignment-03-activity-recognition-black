@@ -30,7 +30,8 @@ class ActivityRecognizer:
         self.recognizer_thread = None
         self.interrupt_event_recognizer = threading.Event()
         
-        self.prediction = "jumpingjack"
+        self.prediction = None
+        self.confidence = None
 
     def data_setup(self):
         reader = CSVReader()
@@ -39,7 +40,7 @@ class ActivityRecognizer:
 
         data_windows = data_processing.create_time_windows(recordings, self.TIME_WINDOW)
         # all data for  training in live system
-        classifier_data = data_processing.transform_windows_to_features(data_windows)
+        classifier_data = data_processing.transform_windows_to_features(data_windows, self.TIME_WINDOW)
 
         self.standard_scaler = data_processing.fit_and_get_standard_scaler(classifier_data)
         self.min_max_scaler = data_processing.fit_and_get_min_max_scaler(classifier_data)
@@ -55,12 +56,16 @@ class ActivityRecognizer:
         self.classifier.fit(features, activities)
 
     def classifier_setup(self, features, activities):
-        self.classifier = OneVsRestClassifier(svm.SVC(kernel="rbf"))
+        self.classifier = OneVsRestClassifier(svm.SVC(kernel="rbf", probability=True))
         self.train_classifier(features, activities)
 
     def predict_classes(self, feature_data):
         classes_predicted = self.classifier.predict(feature_data)
         return classes_predicted
+    
+    def predict_probabilites(self, feautre_data):
+        probabilities = self.classifier.predict_proba(feautre_data)
+        return probabilities
 
     def collect_sensor_data(self, data_deque, sample_rate, interruption_event):
         PORT = 5700
@@ -76,8 +81,8 @@ class ActivityRecognizer:
                     sample["acc_x"] = acc_data["x"]
                     sample["acc_y"] = acc_data["y"]
                     sample["acc_z"] = acc_data["z"]
-                else: 
-                    print("Getting no data! Check Sensor connection!")
+                #else: 
+                    #print("Getting no data! Check Sensor connection!")
                 if sensor.has_capability("gyroscope"):
                     gyro_data = sensor.get_value("gyroscope")
                     sample["gyro_x"] = gyro_data["x"]
@@ -85,6 +90,9 @@ class ActivityRecognizer:
                     sample["gyro_z"] = gyro_data["z"]
                 data_deque.append(sample)
             time.sleep(time_between_samples / 2)
+            
+        sensor.disconnect() 
+        # disconnect sensor bei interrupt event
 
     def start_data_collection(self):
         self.sensor_thread = threading.Thread(
@@ -114,14 +122,16 @@ class ActivityRecognizer:
                 ]
                 data_processing.convert_gyro_data(live_recording)
                 data_window = data_processing.create_time_windows(live_recording, self.TIME_WINDOW)
-                classifier_data = data_processing.transform_windows_to_features(data_window)
+                classifier_data = data_processing.transform_windows_to_features(data_window, self.TIME_WINDOW)
                 standard_scaled_data = data_processing.perform_scaling(self.standard_scaler, classifier_data)
                 normalized_data = data_processing.perform_scaling(self.min_max_scaler, standard_scaled_data)
 
                 self.sample_features = normalized_data.copy().drop(columns="activity")
                 
                 self.prediction = self.predict_classes(self.sample_features)[0]
-                print(f"Prediction: {self.prediction} in time: {time.time()- start_time}")
+                self.confidence = self.predict_probabilites(self.sample_features)[0].max()
+              
+                #print(f"Prediction: {self.prediction} in time: {time.time()- start_time}")
             time.sleep(0.05)
 
     def start_recognizer(self):
@@ -138,7 +148,11 @@ class ActivityRecognizer:
         self.interrupt_event_recognizer.set()
         self.sensor_thread.join()
         self.recognizer_thread.join()
+        
         print("Recognizer stopped!")
 
     def get_prediction(self):
         return self.prediction
+    
+    def get_confidence(self):
+        return self.confidence
