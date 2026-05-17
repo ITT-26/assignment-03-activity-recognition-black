@@ -24,7 +24,7 @@ class ActivityDisplay:
             batch=self.labels,
         )
         self.activity_label = pyglet.text.Label(
-            "NO SENSOR",
+            self.unknown_activity_text,
             font_size=int(self.box.height * 0.05),
             x=self.box.width / 2,
             y=self.box.height * 0.89,
@@ -226,12 +226,10 @@ def main():
 def query_activity_prediction(dt, trainer, recognizer):
     activity = recognizer.get_prediction()
     if activity is None:
-        return
+        activity = trainer.activity_display.unknown_activity_text
     confidence = recognizer.get_confidence()
     if confidence is None:
-        return
-    # if confidence < 0.72:
-    #   activity = trainer.activity_display.unknown_activity_text
+        confidence = 0
     trainer.set_activity(activity, confidence)
 
 

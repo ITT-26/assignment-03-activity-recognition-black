@@ -29,10 +29,10 @@ class ActivityRecognizer:
 
         self.recognizer_thread = None
         self.interrupt_event_recognizer = threading.Event()
-        
+
         self.prediction = None
         self.confidence = None
-        
+
         self.player = player_name
 
     def data_setup(self):
@@ -42,12 +42,22 @@ class ActivityRecognizer:
 
         data_windows = data_processing.create_time_windows(recordings, self.TIME_WINDOW)
         # all data for  training in live system
-        classifier_data = data_processing.transform_windows_to_features(data_windows, self.TIME_WINDOW)
+        classifier_data = data_processing.transform_windows_to_features(
+            data_windows, self.TIME_WINDOW
+        )
 
-        self.standard_scaler = data_processing.fit_and_get_standard_scaler(classifier_data)
-        self.min_max_scaler = data_processing.fit_and_get_min_max_scaler(classifier_data)
-        standard_scaled_data = data_processing.perform_scaling(self.standard_scaler, classifier_data)
-        normalized_data = data_processing.perform_scaling(self.min_max_scaler, standard_scaled_data)
+        self.standard_scaler = data_processing.fit_and_get_standard_scaler(
+            classifier_data
+        )
+        self.min_max_scaler = data_processing.fit_and_get_min_max_scaler(
+            classifier_data
+        )
+        standard_scaled_data = data_processing.perform_scaling(
+            self.standard_scaler, classifier_data
+        )
+        normalized_data = data_processing.perform_scaling(
+            self.min_max_scaler, standard_scaled_data
+        )
 
         activities = normalized_data["activity"]
         features = normalized_data.copy().drop(columns="activity")
@@ -64,7 +74,7 @@ class ActivityRecognizer:
     def predict_classes(self, feature_data):
         classes_predicted = self.classifier.predict(feature_data)
         return classes_predicted
-    
+
     def get_decision_data(self, feature_data):
         decision_data = self.classifier.decision_function(feature_data)
         return decision_data
@@ -76,15 +86,20 @@ class ActivityRecognizer:
         next_sample = time.time()
         while not interruption_event.is_set():
             if time.time() >= next_sample:
-                sample = {}
+                sample = {
+                    "acc_x": 0.0,
+                    "acc_y": 0.0,
+                    "acc_z": 0.0,
+                    "gyro_x": 0.0,
+                    "gyro_y": 0.0,
+                    "gyro_z": 0.0,
+                }
                 sample["timestamp"] = time.time()
                 if sensor.has_capability("accelerometer"):
                     acc_data = sensor.get_value("accelerometer")
                     sample["acc_x"] = acc_data["x"]
                     sample["acc_y"] = acc_data["y"]
                     sample["acc_z"] = acc_data["z"]
-                #else: 
-                    #print("Getting no data! Check Sensor connection!")
                 if sensor.has_capability("gyroscope"):
                     gyro_data = sensor.get_value("gyroscope")
                     sample["gyro_x"] = gyro_data["x"]
@@ -92,8 +107,8 @@ class ActivityRecognizer:
                     sample["gyro_z"] = gyro_data["z"]
                 data_deque.append(sample)
             time.sleep(time_between_samples / 2)
-            
-        sensor.disconnect() 
+
+        sensor.disconnect()
         # disconnect sensor bei interrupt event
 
     def start_data_collection(self):
@@ -113,7 +128,7 @@ class ActivityRecognizer:
     def run_recognizer(self, interruption_event):
         while not interruption_event.is_set():
             if len(self.sample_data) >= self.amount_of_samples_for_prediction:
-                
+
                 start_time = time.time()
                 live_recording = [
                     {
@@ -124,21 +139,44 @@ class ActivityRecognizer:
                     }
                 ]
                 data_processing.convert_gyro_data(live_recording)
-                data_window = data_processing.create_time_windows(live_recording, self.TIME_WINDOW)
-                classifier_data = data_processing.transform_windows_to_features(data_window, self.TIME_WINDOW)
-                standard_scaled_data = data_processing.perform_scaling(self.standard_scaler, classifier_data)
-                normalized_data = data_processing.perform_scaling(self.min_max_scaler, standard_scaled_data)
+                data_window = data_processing.create_time_windows(
+                    live_recording, self.TIME_WINDOW
+                )
+                classifier_data = data_processing.transform_windows_to_features(
+                    data_window, self.TIME_WINDOW
+                )
+
+                # print(classifier_data)
+                ACC_THRESHHOLD = 1.1
+                GYRO_THRESHHOLD = 0.5
+
+                if (
+                    classifier_data["acc_strenght_mean"].iloc[0] < ACC_THRESHHOLD
+                    and classifier_data["gyro_strenght_mean"].iloc[0] < GYRO_THRESHHOLD
+                ):
+                    # No movement so no predicition
+                    self.prediction = None
+                    self.confidence = 0
+                    time.sleep(0.05)
+                    continue
+
+                standard_scaled_data = data_processing.perform_scaling(
+                    self.standard_scaler, classifier_data
+                )
+                normalized_data = data_processing.perform_scaling(
+                    self.min_max_scaler, standard_scaled_data
+                )
 
                 self.sample_features = normalized_data.copy().drop(columns="activity")
-                
+
                 self.prediction = self.predict_classes(self.sample_features)[0]
-                
+
                 decision_data = self.get_decision_data(self.sample_features)[0]
-                print(decision_data)
-            
-                self.confidence = decision_data.max()  / decision_data.sum()
-              
-                #print(f"Prediction: {self.prediction} in time: {time.time()- start_time}")
+                # print(decision_data)
+
+                self.confidence = decision_data.max() / decision_data.sum()
+
+                # print(f"Prediction: {self.prediction} in time: {time.time()- start_time}")
             time.sleep(0.05)
 
     def start_recognizer(self):
@@ -155,11 +193,11 @@ class ActivityRecognizer:
         self.interrupt_event_recognizer.set()
         self.sensor_thread.join()
         self.recognizer_thread.join()
-        
+
         print("Recognizer stopped!")
 
     def get_prediction(self):
         return self.prediction
-    
+
     def get_confidence(self):
         return self.confidence
