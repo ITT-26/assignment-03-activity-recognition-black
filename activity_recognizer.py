@@ -38,6 +38,11 @@ class ActivityRecognizer:
     def data_setup(self):
         reader = CSVReader()
         recordings = reader.get_data_files_as_df()
+        for rec in recordings.copy():
+            if rec["sample_rate"] == '20hz':
+                recordings.remove(rec)
+        # testing showed train only with sample rate 100 for slightly better accuracy
+            
         data_processing.convert_gyro_data(recordings)
 
         data_windows = data_processing.create_time_windows(recordings, self.TIME_WINDOW)
@@ -209,3 +214,6 @@ class ActivityRecognizer:
 
     def get_confidence(self):
         return self.confidence
+
+rec = ActivityRecognizer("player")
+rec.data_setup()
