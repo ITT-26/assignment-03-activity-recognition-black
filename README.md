@@ -23,8 +23,6 @@
    - names for radian conversion are hardcoded (lennart, maximilian)
 - prepare the DIPPID app for sensor input the port should be `5700`
 - when the programm runs and the loading text disappears you can simply start performing one of the exercises and the program will show you the detection and track the time performing the same exercise
-   - for running it is best to put your phone in your pocket
-   - for lifiting and rowing it is best to put your phone in your hand 
-   - for jumping jacks either postion works good
+- for lifiting and rowing you need to put your phone in your hand to capture the movement
 - there is not further user interaction required
 - if you fail (and another exercise is detected) or stop the timer will restart for the next acitivity you perform  
