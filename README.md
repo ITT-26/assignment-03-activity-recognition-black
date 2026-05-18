@@ -21,6 +21,10 @@
 - run [fitness_trainer.py](./fitness_trainer.py) via `python .\fitness_trainer.py`
    - you can also optionally add your name `python .\fitness_trainer.py your_name` so the programm checks if your gyroscope data needs radian conversion
    - names for radian conversion are hardcoded (lennart, maximilian)
+- prepare the DIPPID app for sensor input the port should be `5700`
 - when the programm runs and the loading text disappears you can simply start performing one of the exercises and the program will show you the detection and track the time performing the same exercise
+   - for running it is best to put your phone in your pocket
+   - for lifiting and rowing it is best to put your phone in your hand 
+   - for jumping jacks either postion works good
 - there is not further user interaction required
 - if you fail (and another exercise is detected) or stop the timer will restart for the next acitivity you perform  

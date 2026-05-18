@@ -74,16 +74,20 @@ def transform_windows_to_features(windows, time_window):
             window["acc_x"] ** 2 + window["acc_y"] ** 2 + window["acc_z"] ** 2
         )
         
+        # LOSO testing shows no gyro data needed at all 
+        """
         gyro_strengths = np.sqrt(
             window["gyro_x"] ** 2 + window["gyro_y"] ** 2 + window["gyro_z"] ** 2
         )
-        
+        """
         feature_row["acc_strenght_mean"] = acc_strengths.mean()
         feature_row["acc_strenght_std"] = acc_strengths.std()
 
-        
+        # LOSO testing shows no gyro data needed at all
+        """ 
         feature_row["gyro_strenght_mean"] = gyro_strengths.mean()
         feature_row["gyro_strenght_std"] = gyro_strengths.std()
+        """
         
         acc_signal = acc_strengths - acc_strengths.mean()
         # durchschnitt/grundwert des signals entfernen um nur echte veränderungen zu erhalten
@@ -94,19 +98,20 @@ def transform_windows_to_features(windows, time_window):
         acc_freqs = np.fft.rfftfreq(len(acc_signal_hamming), time_window / len(window))
         feature_row["acc_dom_freq"] = acc_freqs[np.argmax(np.abs(acc_fft))]
 
-        
+        # LOSO testing shows no gyro data needed at all
+        """
         gyro_signal = gyro_strengths - gyro_strengths.mean()
         # durchschnitt/grundwert des signals entfernen um nur echte veränderungen zu erhalten
         # (mit Hilfe von ChatGPT auf diesen fix gekommen)
-
+        
         gyro_signal_hamming = gyro_signal * np.hamming(len(gyro_signal))
         gyro_fft = np.fft.rfft(gyro_signal_hamming)
         gyro_freqs = np.fft.rfftfreq(
             len(gyro_signal_hamming), time_window / len(window)
         )
         feature_row["dom_gyro_freq"] = gyro_freqs[np.argmax(np.abs(gyro_fft))]
+        """
         
-
         feature_rows.append(feature_row)
 
     classifier_data = pd.DataFrame(feature_rows)

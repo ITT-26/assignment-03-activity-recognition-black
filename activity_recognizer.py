@@ -68,16 +68,22 @@ class ActivityRecognizer:
         self.classifier.fit(features, activities)
 
     def classifier_setup(self, features, activities):
-        self.classifier = OneVsOneClassifier(svm.SVC(kernel="rbf"))
+        self.classifier = svm.SVC(kernel="poly", degree=4, gamma="scale",  C=10, probability=True) 
+        # testing results hier einsetzen
         self.train_classifier(features, activities)
 
     def predict_classes(self, feature_data):
         classes_predicted = self.classifier.predict(feature_data)
         return classes_predicted
 
-    def get_decision_data(self, feature_data):
+    def get_decision_data(self, feature_data): 
+        # nur für OneVsOne gebraucht
         decision_data = self.classifier.decision_function(feature_data)
         return decision_data
+    
+    def predict_probabilities(self, feature_data):
+        probabilities = self.classifier.predict_proba(feature_data)
+        return probabilities
 
     def collect_sensor_data(self, data_deque, sample_rate, interruption_event):
         PORT = 5700
@@ -147,12 +153,12 @@ class ActivityRecognizer:
                 )
 
                 # print(classifier_data)
-                ACC_THRESHHOLD = 1.1
-                GYRO_THRESHHOLD = 0.5
+                ACC_THRESHHOLD = 1 # for sensor on table (not moving)
+                 # GYRO_THRESHHOLD = 0.5 not needed after LOSO testing
 
                 if (
                     classifier_data["acc_strenght_mean"].iloc[0] < ACC_THRESHHOLD
-                    and classifier_data["gyro_strenght_mean"].iloc[0] < GYRO_THRESHHOLD
+                    #and classifier_data["gyro_strenght_mean"].iloc[0] < GYRO_THRESHHOLD
                 ):
                     # No movement so no predicition
                     self.prediction = None
@@ -171,10 +177,12 @@ class ActivityRecognizer:
 
                 self.prediction = self.predict_classes(self.sample_features)[0]
 
-                decision_data = self.get_decision_data(self.sample_features)[0]
+                # decision data nur für OneVsOne
+                # decision_data = self.get_decision_data(self.sample_features)[0]
                 # print(decision_data)
 
-                self.confidence = decision_data.max() / decision_data.sum()
+                self.confidence = self.predict_probabilities(self.sample_features)[0].max()
+                # für OneVsOne: decision_data.max() / decision_data.sum()
 
                 # print(f"Prediction: {self.prediction} in time: {time.time()- start_time}")
             time.sleep(0.05)
