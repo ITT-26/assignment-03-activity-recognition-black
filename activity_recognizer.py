@@ -214,6 +214,3 @@ class ActivityRecognizer:
 
     def get_confidence(self):
         return self.confidence
-
-rec = ActivityRecognizer("player")
-rec.data_setup()
