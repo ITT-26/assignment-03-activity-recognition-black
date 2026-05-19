@@ -47,6 +47,8 @@ def create_time_windows(recordings, window_length):
             window_end += window_size
             
         # rest is discarded only relevant when people didnt do correct timing in gather_data and have too few or too much lines
+        # we chose to exclude daniels data because it was way off we kept data from people that were only off by one line 
+        # we also kept thus data because it was not so much but we extract fewer windows
     return windows
 
 
