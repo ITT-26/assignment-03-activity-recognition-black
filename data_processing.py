@@ -45,7 +45,8 @@ def create_time_windows(recordings, window_length):
 
             window_start += window_size
             window_end += window_size
-
+            
+        # rest is discarded only relevant when people didnt do correct timing in gather_data and have too few or too much lines
     return windows
 
 
