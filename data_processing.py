@@ -59,7 +59,8 @@ def transform_windows_to_features(windows, time_window):
         feature_row = {}
 
         feature_row["activity"] = window["activity"].iloc[0]
-
+        # features for selection were suggested by ChatGPT in a chat about features for an activity recognizer with the raw data
+        # especially asking about reduction for better performence in a live detector
         for acc_col in ["acc_x", "acc_y", "acc_z"]:
             feature_row[f"{acc_col}_mean"] = window[acc_col].mean()
             feature_row[f"{acc_col}_std"] = window[acc_col].std()
