@@ -8,7 +8,7 @@ class CSVReader:
     def __init__(self):
         self.data_directory = Path("data")
         self.valid_data_names = [
-            "Daniel",
+            # "Daniel", exclude daniel because of wrong samples, 
             "felix",
             "ferdi",
             "georg",
