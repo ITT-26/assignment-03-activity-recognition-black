@@ -14,7 +14,9 @@ from collections import deque
 class ActivityRecognizer:
     def __init__(self, player_name):
         self.TIME_WINDOW = 2
-        self.SAMPLE_RATE = 100  # in Hz
+        self.SAMPLE_RATE = 20  # in Hz
+        # 20 works better than 100 in test
+        
         self.classifier = None
         self.amount_of_samples_for_prediction = self.TIME_WINDOW * self.SAMPLE_RATE
 
@@ -39,7 +41,7 @@ class ActivityRecognizer:
         reader = CSVReader()
         recordings = reader.get_data_files_as_df()
         for rec in recordings.copy():
-            if rec["sample_rate"] == '20hz':
+            if rec["sample_rate"] == '100hz':
                 recordings.remove(rec)
         # testing showed train only with sample rate 100 for slightly better accuracy
             
@@ -73,7 +75,7 @@ class ActivityRecognizer:
         self.classifier.fit(features, activities)
 
     def classifier_setup(self, features, activities):
-        self.classifier = svm.SVC(kernel="poly", degree=4, gamma="scale",  C=10, probability=True) 
+        self.classifier = svm.SVC(kernel="poly", degree=4, gamma="scale",  C=10, coef0=0, probability=True) 
         # testing results hier einsetzen
         self.train_classifier(features, activities)
 
