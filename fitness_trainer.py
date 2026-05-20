@@ -126,6 +126,7 @@ class ActivityDisplay:
                 gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA
             )  # pylint: disable=unreachable
 
+            # Used ChatGPT to genrate this part for better image scaling and spacing
             img1 = self.activity_images[0]
             img2 = self.activity_images[1]
 
