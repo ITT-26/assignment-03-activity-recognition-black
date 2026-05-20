@@ -16,7 +16,12 @@
 
 # Task 2
 ## Documentation
-- you can find the model testing and documentation in the notebook [classifier_testing.ipynb](./classifier_testing.ipynb)
+- A complete documentation of the model development and evaluation process can be found in the [documentation.md](./documentation.md)
+- The complete code of the process can be found in the notebook [classifier_testing.ipynb](./classifier_testing.ipynb)
+- The notebook contains both the final evaluation pipeline and the iterative experimentation process during development
+- Different preprocessing strategies, feature sets, kernels, window lengths, sampling rates, and evaluation methods were tested and documented
+- The different stages of development and evaluation are separated using Markdown sections throughout the notebook
+- The "Final Evaluation Flow" section contains the final evaluation pipeline and the final model selection process
 ## How to run
 - run [fitness_trainer.py](./fitness_trainer.py) via `python .\fitness_trainer.py`
    - you can also optionally add your name `python .\fitness_trainer.py your_name` so the programm checks if your gyroscope data needs radian conversion
